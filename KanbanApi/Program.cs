@@ -14,6 +14,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
+// Required for DI. Without this, Minimal APIs will incorrectly infer IBoardService 
+// as a Body parameter and throw an exception on GET requests.
 builder.Services.AddScoped<IBoardService, BoardService>();
 
 builder.Services.AddEndpointsApiExplorer();
