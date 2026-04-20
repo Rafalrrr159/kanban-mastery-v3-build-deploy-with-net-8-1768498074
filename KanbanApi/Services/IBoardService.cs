@@ -10,4 +10,5 @@ public interface IBoardService
     Task<Board?> UpdateAsync(int id, Board board);
     Task<bool> DeleteAsync(int id);
     Task<bool> AddMemberAsync(int boardId, string userId);
+    Task<bool> IsMemberAsync(int boardId, string userId);
 }

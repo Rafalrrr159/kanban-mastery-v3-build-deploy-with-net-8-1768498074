@@ -61,5 +61,18 @@ namespace KanbanApi.Services
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<Card?> AssignAsync(int boardId, int cardId, string userId)
+        {
+            var card = await _context.Cards
+                .Include(c => c.Column)
+                .FirstOrDefaultAsync(c => c.Id == cardId && c.Column!.BoardId == boardId);
+
+            if (card == null) return null;
+
+            card.AssignedToUserId = userId;
+            await _context.SaveChangesAsync();
+            return card;
+        }
     }
 }

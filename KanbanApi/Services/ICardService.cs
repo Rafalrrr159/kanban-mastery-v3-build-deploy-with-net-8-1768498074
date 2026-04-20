@@ -7,5 +7,6 @@ namespace KanbanApi.Services
         Task<Card?> CreateAsync(int boardId, CreateCardDto dto);
         Task<Card?> UpdateAsync(int boardId, int cardId, UpdateCardDto dto);
         Task<bool> DeleteAsync(int boardId, int cardId);
+        Task<Card?> AssignAsync(int boardId, int cardId, string userId);
     }
 }
