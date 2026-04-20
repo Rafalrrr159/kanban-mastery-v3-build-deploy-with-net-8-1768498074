@@ -82,5 +82,22 @@ public class BoardService : IBoardService
             return false;
         }
     }
+
+    public async Task<bool> AddMemberAsync(int boardId, string userId)
+    {
+        var exists = await _context.BoardMembers.AnyAsync(m => m.BoardId == boardId && m.UserId == userId);
+        if (exists) return false;
+
+        var membership = new BoardMember
+        {
+            BoardId = boardId,
+            UserId = userId,
+            Role = BoardRole.Member
+        };
+
+        _context.BoardMembers.Add(membership);
+        await _context.SaveChangesAsync();
+        return true;
+    }
 }
 

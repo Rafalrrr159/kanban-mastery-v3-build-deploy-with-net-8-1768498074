@@ -1,9 +1,11 @@
-using System.Security.Claims;
+using KanbanApi.Authorization;
 using KanbanApi.Data;
 using KanbanApi.Models;
 using KanbanApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +18,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
-builder.Services.AddAuthorization();
+builder.Services.AddScoped<IAuthorizationHandler, IsBoardOwnerHandler>();
+
+builder.Services.AddAuthorization(options =>
+{
+    // Rejestrujemy nasz¹ now¹ politykê
+    options.AddPolicy("IsBoardOwner", policy =>
+        policy.Requirements.Add(new IsBoardOwnerRequirement()));
+});
 
 // Required for DI. Without this, Minimal APIs will incorrectly infer IBoardService 
 // as a Body parameter and throw an exception on GET requests.
@@ -64,6 +73,28 @@ app.MapPost("/api/boards", async (CreateBoardDto dto, IBoardService boardService
     var createdBoard = await boardService.CreateAsync(board, userId);
 
     return TypedResults.Created($"/api/boards/{createdBoard.Id}", new { id = createdBoard.Id, name = createdBoard.Name });
+}).RequireAuthorization();
+
+app.MapPost("/api/boards/{boardId}/members", 
+    async (
+    int boardId,
+    AddBoardMemberDto dto,
+    IBoardService boardService,
+    IAuthorizationService authService,
+    ClaimsPrincipal user) =>
+{
+    var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardOwner");
+
+    if (!authResult.Succeeded)
+    {
+        return Results.Forbid();
+    }
+
+    var result = await boardService.AddMemberAsync(boardId, dto.UserId);
+
+    if (!result) return Results.BadRequest("User is already a member or invalid request.");
+
+    return Results.Ok();
 }).RequireAuthorization();
 
 app.Run();
