@@ -46,7 +46,7 @@ namespace KanbanApi.Tests
             var token = (await login.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("accessToken").GetString();
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            var board = await _client.PostAsJsonAsync("/api/boards", new CreateBoardDto("Kanban"));
+            var board = await _client.PostAsJsonAsync("/api/boards", new Dtos("Kanban"));
             var boardId = (await board.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
 
             var createResponse = await _client.PostAsJsonAsync($"/api/boards/{boardId}/columns", new CreateColumnDto("Do zrobienia"));

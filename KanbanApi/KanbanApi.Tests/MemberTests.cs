@@ -60,7 +60,7 @@ namespace KanbanApi.Tests
             var token = (await loginResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("accessToken").GetString();
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            var boardResponse = await _client.PostAsJsonAsync("/api/boards", new CreateBoardDto("Auth Test Board"));
+            var boardResponse = await _client.PostAsJsonAsync("/api/boards", new Dtos("Auth Test Board"));
             var boardId = (await boardResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
 
             var addMemberResponse = await _client.PostAsJsonAsync($"/api/boards/{boardId}/members", new AddBoardMemberDto(userIdToAdd));

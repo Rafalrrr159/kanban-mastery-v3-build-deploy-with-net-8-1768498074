@@ -56,7 +56,7 @@ public class BoardTests : IClassFixture<WebApplicationFactory<Program>>
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var boardName = "Tablica Testowa";
-        var response = await _client.PostAsJsonAsync("/api/boards", new CreateBoardDto(boardName));
+        var response = await _client.PostAsJsonAsync("/api/boards", new Dtos(boardName));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var createdBoard = await response.Content.ReadFromJsonAsync<JsonElement>();
