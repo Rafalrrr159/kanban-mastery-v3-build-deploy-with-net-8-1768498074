@@ -131,5 +131,4 @@ app.MapGet("/api/boards/{boardId}",
 
 app.Run();
 
-
 public partial class Program { }
