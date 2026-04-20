@@ -19,12 +19,15 @@ builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.AddScoped<IAuthorizationHandler, IsBoardOwnerHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, IsBoardMemberHandler>();
 
 builder.Services.AddAuthorization(options =>
 {
-    // Rejestrujemy nasz¹ now¹ politykê
     options.AddPolicy("IsBoardOwner", policy =>
         policy.Requirements.Add(new IsBoardOwnerRequirement()));
+
+    options.AddPolicy("IsBoardMember", policy =>
+        policy.Requirements.Add(new IsBoardMemberRequirement()));
 });
 
 // Required for DI. Without this, Minimal APIs will incorrectly infer IBoardService 
@@ -95,6 +98,35 @@ app.MapPost("/api/boards/{boardId}/members",
     if (!result) return Results.BadRequest("User is already a member or invalid request.");
 
     return Results.Ok();
+}).RequireAuthorization();
+
+app.MapGet("/api/boards/{boardId}", 
+    async (
+    int boardId,
+    IBoardService boardService,
+    IAuthorizationService authService,
+    ClaimsPrincipal user) =>
+{
+    var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardMember");
+    if (!authResult.Succeeded)
+    {
+        return Results.Forbid();
+    }
+
+    var board = await boardService.GetByIdAsync(boardId);
+    if (board == null) return Results.NotFound();
+
+    var responseDto = new BoardDetailsDto(
+        board.Id,
+        board.Name,
+        board.Columns.Select(col => new ColumnDto(
+            col.Id,
+            col.Name,
+            col.Cards.Select(c => new CardDto(c.Id, c.Title, c.Description))
+        ))
+    );
+
+    return TypedResults.Ok(responseDto);
 }).RequireAuthorization();
 
 app.Run();
