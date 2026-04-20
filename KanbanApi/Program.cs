@@ -21,6 +21,7 @@ builder.Services.AddAuthorization();
 // Required for DI. Without this, Minimal APIs will incorrectly infer IBoardService 
 // as a Body parameter and throw an exception on GET requests.
 builder.Services.AddScoped<IBoardService, BoardService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -41,17 +42,16 @@ app.UseAuthorization();
 
 app.MapIdentityApi<ApplicationUser>();
 
-app.MapGet("/api/users/me", async (ClaimsPrincipal user, ApplicationDbContext db) =>
+app.MapGet("/api/users/me", async (ClaimsPrincipal user, IUserService userService) =>
 {
     var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-    var appUser = await db.Users.FindAsync(userId);
+    if (userId is null) return Results.Unauthorized();
 
-    if (appUser is null)
-    {
-        return Results.NotFound();
-    }
+    var profile = await userService.GetUserProfileAsync(userId);
 
-    return TypedResults.Ok(new { appUser.Id, appUser.UserName, appUser.Email });
+    if (profile is null) return Results.NotFound();
+
+    return TypedResults.Ok(profile);
 }).RequireAuthorization();
 
 app.Run();
