@@ -25,6 +25,7 @@ public class BoardService : IBoardService
     {
         return await _context.Boards
             .Include(b => b.Columns)
+                .ThenInclude(c => c.Cards)
             .Include(b => b.Members)
             .AsNoTracking()
             .FirstOrDefaultAsync(b => b.Id == id);
