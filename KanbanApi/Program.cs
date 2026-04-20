@@ -264,6 +264,36 @@ cards.MapDelete("/{cardId}", async (
     return deleted ? Results.NoContent() : Results.NotFound();
 });
 
+cards.MapPut("/{cardId}/assign", async (
+    int boardId,
+    int cardId,
+    AssignCardDto dto,
+    ICardService cardService,
+    IBoardService boardService,
+    IAuthorizationService authService,
+    ClaimsPrincipal user) =>
+{
+    var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardMember");
+    if (!authResult.Succeeded) return Results.Forbid();
+
+    var isTargetUserMember = await boardService.IsMemberAsync(boardId, dto.UserId);
+    if (!isTargetUserMember)
+        return Results.BadRequest("User is not a board member");
+
+    var card = await cardService.AssignAsync(boardId, cardId, dto.UserId);
+
+    if (card is null) return Results.NotFound();
+
+    return Results.Ok(new
+    {
+        card.Id,
+        card.Title,
+        card.Description,
+        card.ColumnId,
+        card.AssignedToUserId
+    });
+});
+
 app.Run();
 
 public partial class Program { }

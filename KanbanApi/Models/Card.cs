@@ -17,5 +17,10 @@ namespace KanbanApi.Models
 
         [ForeignKey(nameof(ColumnId))]
         public Column? Column { get; set; }
+
+        public string? AssignedToUserId { get; set; }
+
+        [ForeignKey(nameof(AssignedToUserId))]
+        public ApplicationUser? AssignedToUser { get; set; }
     }
 }

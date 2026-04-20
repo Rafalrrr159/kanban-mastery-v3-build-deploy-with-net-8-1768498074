@@ -100,5 +100,10 @@ public class BoardService : IBoardService
         await _context.SaveChangesAsync();
         return true;
     }
+
+    public async Task<bool> IsMemberAsync(int boardId, string userId)
+    {
+        return await _context.BoardMembers.AnyAsync(m => m.BoardId == boardId && m.UserId == userId);
+    }
 }
 

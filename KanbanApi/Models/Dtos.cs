@@ -11,4 +11,5 @@
     public record UpdateBoardDto(string Name);
     public record CreateCardDto(string Title, string? Description, int ColumnId);
     public record UpdateCardDto(string Title, string? Description, int ColumnId);
+    public record AssignCardDto(string UserId);
 }
