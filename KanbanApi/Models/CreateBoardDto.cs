@@ -5,4 +5,6 @@
     public record CardDto(int Id, string Title, string? Description);
     public record ColumnDto(int Id, string Name, IEnumerable<CardDto> Cards);
     public record BoardDetailsDto(int Id, string Name, IEnumerable<ColumnDto> Columns);
+    public record CreateColumnDto(string Name);
+    public record UpdateColumnDto(string Name);
 }

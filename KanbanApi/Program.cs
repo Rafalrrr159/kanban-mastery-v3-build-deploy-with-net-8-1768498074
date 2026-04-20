@@ -34,6 +34,8 @@ builder.Services.AddAuthorization(options =>
 // as a Body parameter and throw an exception on GET requests.
 builder.Services.AddScoped<IBoardService, BoardService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IColumnService, ColumnService>();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -128,6 +130,58 @@ app.MapGet("/api/boards/{boardId}",
 
     return TypedResults.Ok(responseDto);
 }).RequireAuthorization();
+
+var columns = app.MapGroup("/api/boards/{boardId}/columns")
+    .RequireAuthorization();
+
+columns.MapPost("/", async (
+    int boardId,
+    CreateColumnDto dto,
+    IColumnService columnService,
+    IAuthorizationService authService,
+    ClaimsPrincipal user) =>
+{
+    var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardMember");
+    if (!authResult.Succeeded) return Results.Forbid();
+
+    var column = await columnService.CreateAsync(boardId, dto.Name);
+    return Results.Created($"/api/boards/{boardId}/columns/{column.Id}", column);
+});
+
+columns.MapPut("/{columnId}", async (
+    int boardId,
+    int columnId,
+    UpdateColumnDto dto,
+    IColumnService columnService,
+    IAuthorizationService authService,
+    ClaimsPrincipal user) =>
+{
+    var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardMember");
+    if (!authResult.Succeeded) return Results.Forbid();
+
+    var updated = await columnService.UpdateAsync(boardId, columnId, dto.Name);
+    return updated != null ? Results.Ok(updated) : Results.NotFound();
+});
+
+columns.MapDelete("/{columnId}", async (
+    int boardId,
+    int columnId,
+    IColumnService columnService,
+    IAuthorizationService authService,
+    ClaimsPrincipal user) =>
+{
+    var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardMember");
+    if (!authResult.Succeeded) return Results.Forbid();
+
+    var result = await columnService.DeleteAsync(boardId, columnId);
+
+    return result switch
+    {
+        true => Results.NoContent(),
+        false => Results.BadRequest("Cannot delete column with existing cards."),
+        null => Results.NotFound()
+    };
+});
 
 app.Run();
 
