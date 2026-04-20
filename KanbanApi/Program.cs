@@ -54,6 +54,18 @@ app.MapGet("/api/users/me", async (ClaimsPrincipal user, IUserService userServic
     return TypedResults.Ok(profile);
 }).RequireAuthorization();
 
+app.MapPost("/api/boards", async (CreateBoardDto dto, IBoardService boardService, ClaimsPrincipal user) =>
+{
+    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (userId is null) return Results.Unauthorized();
+
+    var board = new Board { Name = dto.Name };
+
+    var createdBoard = await boardService.CreateAsync(board, userId);
+
+    return TypedResults.Created($"/api/boards/{createdBoard.Id}", new { id = createdBoard.Id, name = createdBoard.Name });
+}).RequireAuthorization();
+
 app.Run();
 
 

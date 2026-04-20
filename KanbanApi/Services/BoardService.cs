@@ -32,32 +32,19 @@ public class BoardService : IBoardService
 
     public async Task<Board> CreateAsync(Board board, string ownerUserId)
     {
-        await using var transaction = await _context.Database.BeginTransactionAsync();
-
-        try
+        var ownerMember = new BoardMember
         {
-            _context.Boards.Add(board);
-            await _context.SaveChangesAsync();
+            Board = board,
+            UserId = ownerUserId,
+            Role = BoardRole.Owner
+        };
 
-            var ownerMember = new BoardMember
-            {
-                BoardId = board.Id,
-                UserId = ownerUserId,
-                Role = BoardRole.Owner
-            };
+        _context.Boards.Add(board);
+        _context.BoardMembers.Add(ownerMember);
 
-            _context.BoardMembers.Add(ownerMember);
-            await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
-            await transaction.CommitAsync();
-
-            return board;
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+        return board;
     }
 
     public async Task<Board?> UpdateAsync(int id, Board board)
