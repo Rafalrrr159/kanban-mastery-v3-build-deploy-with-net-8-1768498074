@@ -32,6 +32,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGroup("/auth").MapIdentityApi<ApplicationUser>();
+app.MapIdentityApi<ApplicationUser>();
 
 app.Run();
+
+
+public partial class Program { }
