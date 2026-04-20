@@ -51,7 +51,7 @@ namespace KanbanApi.Tests
             var token = (await loginResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("accessToken").GetString();
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            var boardResponse = await _client.PostAsJsonAsync("/api/boards", new CreateBoardDto("Projekt Alpha"));
+            var boardResponse = await _client.PostAsJsonAsync("/api/boards", new Dtos("Projekt Alpha"));
             var boardId = (await boardResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
 
             using (var scope = _factory.Services.CreateScope())

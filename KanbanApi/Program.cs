@@ -68,7 +68,38 @@ app.MapGet("/api/users/me", async (ClaimsPrincipal user, IUserService userServic
     return TypedResults.Ok(profile);
 }).RequireAuthorization();
 
-app.MapPost("/api/boards", async (CreateBoardDto dto, IBoardService boardService, ClaimsPrincipal user) =>
+app.MapPut("/api/boards/{boardId}", 
+    async (
+    int boardId,
+    UpdateBoardDto dto,
+    IBoardService boardService,
+    IAuthorizationService authService,
+    ClaimsPrincipal user) =>
+{
+    var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardOwner");
+    if (!authResult.Succeeded) return Results.Forbid();
+
+    var boardToUpdate = new Board { Name = dto.Name };
+    var updatedBoard = await boardService.UpdateAsync(boardId, boardToUpdate);
+
+    return updatedBoard is not null ? TypedResults.Ok(updatedBoard) : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapDelete("/api/boards/{boardId}", 
+    async (
+    int boardId,
+    IBoardService boardService,
+    IAuthorizationService authService,
+    ClaimsPrincipal user) =>
+{
+    var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardOwner");
+    if (!authResult.Succeeded) return Results.Forbid();
+
+    var deleted = await boardService.DeleteAsync(boardId);
+    return deleted ? Results.NoContent() : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapPost("/api/boards", async (Dtos dto, IBoardService boardService, ClaimsPrincipal user) =>
 {
     var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
     if (userId is null) return Results.Unauthorized();
