@@ -72,5 +72,31 @@ namespace KanbanApi.Tests
             var forbiddenResponse = await _client.DeleteAsync($"/api/boards/{boardId}/columns/{columnId}");
             Assert.Equal(HttpStatusCode.Forbidden, forbiddenResponse.StatusCode);
         }
+
+        [Fact]
+        public async Task CreateColumn_AsNonMember_ReturnsForbidden()
+        {
+            var ownerEmail = "owner_col@test.com";
+            var hackerEmail = "hacker_col@test.com";
+            var pwd = "Password123!";
+
+            await _client.PostAsJsonAsync("/register", new { email = ownerEmail, password = pwd });
+            await _client.PostAsJsonAsync("/register", new { email = hackerEmail, password = pwd });
+
+            var ownerLogin = await _client.PostAsJsonAsync("/login", new { email = ownerEmail, password = pwd });
+            var ownerToken = (await ownerLogin.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("accessToken").GetString();
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ownerToken);
+
+            var boardResp = await _client.PostAsJsonAsync("/api/boards", new Dtos("Private Board"));
+            var boardId = (await boardResp.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
+
+            var hackerLogin = await _client.PostAsJsonAsync("/login", new { email = hackerEmail, password = pwd });
+            var hackerToken = (await hackerLogin.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("accessToken").GetString();
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", hackerToken);
+
+            var response = await _client.PostAsJsonAsync($"/api/boards/{boardId}/columns", new CreateColumnDto("Hacker List"));
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
     }
 }
