@@ -23,25 +23,36 @@ export default function Board() {
   
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
-  
   const [addingCardToColumn, setAddingCardToColumn] = useState(null);
   const [newCardTitle, setNewCardTitle] = useState('');
+
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteUserId, setInviteUserId] = useState('');
+  const [inviteStatus, setInviteStatus] = useState(null);
 
   useEffect(() => {
     const fetchBoardDetails = async () => {
       try {
         const data = await boardService.getBoardById(boardId);
         setBoard(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+      } catch (err) { console.error(err); } 
+      finally { setLoading(false); }
     };
     fetchBoardDetails();
   }, [boardId]);
 
-  const handleAddColumn = async (e) => {
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        setIsInviteModalOpen(false);
+        setInviteStatus(null);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
+
+  const handleAddColumn = async (e) => { /* bez zmian */
     e.preventDefault();
     if (!newColumnName.trim()) return;
     try {
@@ -52,36 +63,30 @@ export default function Board() {
     } catch (err) { console.error(err); }
   };
 
-  const handleAddCard = async (e, columnId) => {
+  const handleAddCard = async (e, columnId) => { /* bez zmian */
     e.preventDefault();
     if (!newCardTitle.trim()) return;
     try {
       const newCard = await boardService.createCard(boardId, columnId, newCardTitle);
-      
       setBoard(prev => {
         const updatedColumns = prev.columns.map(col => {
-          if (col.id === columnId) {
-            return { ...col, cards: [...(col.cards || []), newCard] };
-          }
+          if (col.id === columnId) return { ...col, cards: [...(col.cards || []), newCard] };
           return col;
         });
         return { ...prev, columns: updatedColumns };
       });
-      
       setNewCardTitle('');
       setAddingCardToColumn(null);
     } catch (err) { console.error(err); }
   };
 
-  const handleDragEnd = async (result) => {
+  const handleDragEnd = async (result) => { /* bez zmian */
     const { destination, source, draggableId } = result;
-
     if (!destination) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
 
     const sourceColIndex = board.columns.findIndex(c => c.id.toString() === source.droppableId);
     const destColIndex = board.columns.findIndex(c => c.id.toString() === destination.droppableId);
-
     const sourceCol = board.columns[sourceColIndex];
     const destCol = board.columns[destColIndex];
 
@@ -100,17 +105,30 @@ export default function Board() {
     setBoard(boardCopy);
 
     try {
-      await boardService.moveCard(
-        boardId, 
-        draggableId, 
-        destCol.id,
-        movedCard.title, 
-        movedCard.description
-      );
-    } catch (err) {
-      console.error(err);
+      await boardService.moveCard(boardId, draggableId, destCol.id, movedCard.title, movedCard.description);
+    } catch {
       setBoard(previousBoardState);
       alert("Failed to move card. Network error.");
+    }
+  };
+
+  const handleInvite = async (e) => {
+    e.preventDefault();
+    if (!inviteUserId.trim()) return;
+    setInviteStatus(null);
+    
+    try {
+      await boardService.addMember(boardId, inviteUserId);
+      setInviteStatus({ type: 'success', message: 'User successfully added to the board!' });
+      setInviteUserId('');
+      
+      setTimeout(() => {
+        setIsInviteModalOpen(false);
+        setInviteStatus(null);
+      }, 2000);
+    } catch (err) {
+      console.error(err);
+      setInviteStatus({ type: 'error', message: err.response?.data || 'Failed to add user.' });
     }
   };
 
@@ -119,40 +137,36 @@ export default function Board() {
 
   return (
     <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#fff' }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-        <Link to="/dashboard" style={{ marginRight: '20px', textDecoration: 'none', color: '#0052cc', fontWeight: 'bold', padding: '8px 12px', backgroundColor: '#ebecf0', borderRadius: '4px' }}>
-          &larr; Back to Dashboard
-        </Link>
-        <h1 style={{ margin: 0, color: '#172b4d' }}>{board.name}</h1>
+      
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Link to="/dashboard" style={{ marginRight: '20px', textDecoration: 'none', color: '#0052cc', fontWeight: 'bold', padding: '8px 12px', backgroundColor: '#ebecf0', borderRadius: '4px' }}>
+            &larr; Back to Dashboard
+          </Link>
+          <h1 style={{ margin: 0, color: '#172b4d' }}>{board.name}</h1>
+        </div>
+        
+        <button 
+          onClick={() => setIsInviteModalOpen(true)}
+          style={{ padding: '8px 16px', backgroundColor: '#0052cc', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+        >
+          Share / Invite
+        </button>
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <div style={{ display: 'flex', gap: '20px', flexGrow: 1, overflowX: 'auto', paddingBottom: '20px', alignItems: 'flex-start' }}>
-          
           {board.columns && board.columns.map(column => (
             <div key={column.id} style={{ minWidth: '280px', maxWidth: '280px', backgroundColor: '#f4f5f7', padding: '12px', borderRadius: '8px' }}>
               <h3 style={{ marginTop: 0, color: '#172b4d', fontSize: '16px', padding: '4px 8px' }}>{column.name}</h3>
-              
               <Droppable droppableId={column.id.toString()}>
                 {(provided) => (
-                  <div 
-                    ref={provided.innerRef} 
-                    {...provided.droppableProps}
-                    style={{ minHeight: '50px' }}
-                  >
+                  <div ref={provided.innerRef} {...provided.droppableProps} style={{ minHeight: '50px' }}>
                     {column.cards && column.cards.map((card, index) => (
-                      
                       <Draggable key={card.id.toString()} draggableId={card.id.toString()} index={index}>
                         {(provided) => (
-                          <div 
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            style={{ 
-                              ...provided.draggableProps.style, // Ważne dla animacji
-                              backgroundColor: 'white', padding: '12px', borderRadius: '6px', 
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.15)', cursor: 'grab', marginBottom: '8px'
-                            }}
+                          <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}
+                            style={{ ...provided.draggableProps.style, backgroundColor: 'white', padding: '12px', borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.15)', cursor: 'grab', marginBottom: '8px' }}
                           >
                             <div style={{ marginBottom: card.assigneeName ? '12px' : '0' }}>{card.title}</div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -161,7 +175,6 @@ export default function Board() {
                           </div>
                         )}
                       </Draggable>
-
                     ))}
                     {provided.placeholder}
                   </div>
@@ -199,6 +212,47 @@ export default function Board() {
           </div>
         </div>
       </DragDropContext>
+
+      {isInviteModalOpen && (
+        <div 
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+          onClick={() => { setIsInviteModalOpen(false); setInviteStatus(null); }}
+        >
+          <div 
+            style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', width: '400px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ marginTop: 0, color: '#172b4d' }}>Invite Teammate</h2>
+            <p style={{ color: '#5e6c84', fontSize: '14px', marginBottom: '16px' }}>Enter the User ID of the person you want to invite to collaborate on this board.</p>
+            
+            {inviteStatus && (
+              <div style={{ padding: '10px', marginBottom: '16px', borderRadius: '4px', backgroundColor: inviteStatus.type === 'error' ? '#ffebe6' : '#e3fcef', color: inviteStatus.type === 'error' ? '#bf2600' : '#006644' }}>
+                {inviteStatus.message}
+              </div>
+            )}
+
+            <form onSubmit={handleInvite}>
+              <input 
+                type="text" 
+                placeholder="Enter User ID..." 
+                value={inviteUserId}
+                onChange={e => setInviteUserId(e.target.value)}
+                style={{ width: '100%', padding: '10px', marginBottom: '20px', boxSizing: 'border-box', borderRadius: '4px', border: '2px solid #dfe1e6' }}
+                autoFocus
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button type="button" onClick={() => { setIsInviteModalOpen(false); setInviteStatus(null); }} style={{ padding: '8px 16px', backgroundColor: '#f4f5f7', color: '#172b4d', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  Cancel
+                </button>
+                <button type="submit" style={{ padding: '8px 16px', backgroundColor: '#0052cc', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  Send Invite
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
