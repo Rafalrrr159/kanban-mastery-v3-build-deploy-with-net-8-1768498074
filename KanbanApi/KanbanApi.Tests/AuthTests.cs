@@ -110,5 +110,16 @@ namespace KanbanApi.Tests
 
             _client.DefaultRequestHeaders.Authorization = null;
         }
+
+        [Fact]
+        public async Task Login_WithWrongPassword_ReturnsUnauthorized()
+        {
+            var email = "wrong_password@example.com";
+            await _client.PostAsJsonAsync("/register", new { email, password = "CorrectPassword123!" });
+
+            var response = await _client.PostAsJsonAsync("/login", new { email, password = "WrongPassword!" });
+
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
     }
 }

@@ -88,5 +88,20 @@ namespace KanbanApi.Tests
 
             Assert.Equal(HttpStatusCode.Forbidden, hackerResponse.StatusCode);
         }
+
+        [Fact]
+        public async Task GetBoardDetails_NonExistentBoard_ReturnsForbidden()
+        {
+            var email = "notfound_test@example.com";
+            var pwd = "Password123!";
+            await _client.PostAsJsonAsync("/register", new { email, password = pwd });
+            var loginResponse = await _client.PostAsJsonAsync("/login", new { email, password = pwd });
+            var token = (await loginResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("accessToken").GetString();
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var response = await _client.GetAsync("/api/boards/9999");
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
     }
 }
