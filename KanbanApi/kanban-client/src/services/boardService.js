@@ -37,5 +37,10 @@ export const boardService = {
       description: description || '' 
     });
     return response.data;
+  },
+  
+  addMember: async (boardId, userId) => {
+    const response = await api.post(`/api/boards/${boardId}/members`, { userId });
+    return response.data;
   }
 };
