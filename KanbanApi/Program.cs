@@ -82,6 +82,16 @@ app.MapGet("/api/users/me", async (ClaimsPrincipal user, IUserService userServic
     return TypedResults.Ok(profile);
 }).RequireAuthorization();
 
+app.MapGet("/api/boards", async (IBoardService boardService, ClaimsPrincipal user) =>
+{
+    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (userId is null) return Results.Unauthorized();
+
+    var boards = await boardService.GetByUserIdAsync(userId);
+
+    return TypedResults.Ok(boards);
+}).RequireAuthorization();
+
 app.MapPut("/api/boards/{boardId}", 
     async (
     int boardId,
